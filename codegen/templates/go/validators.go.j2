@@ -1,0 +1,34 @@
+// Auto-generated validator helpers for pentagi-taxonomy.
+// DO NOT EDIT - this file is generated from entities.yml
+
+package entities
+
+import (
+	"github.com/go-playground/validator/v10"
+)
+
+// Validator is the shared validator instance for all entities
+var Validator *validator.Validate
+
+func init() {
+	Validator = validator.New()
+	
+	// Register custom validators for complex regex patterns here
+	// Example: Validator.RegisterValidation("cve_id", cveIDValidator)
+}
+
+{% for node_name in nodes.keys() %}
+// Validate validates a {{ node_name }} entity
+func (e *{{ node_name }}) Validate() error {
+	return Validator.Struct(e)
+}
+
+{% endfor %}
+{%- for edge_name, edge_def in edges.items() %}
+// Validate validates a {{ edge_def.class_name }} edge
+func (e *{{ edge_def.class_name }}) Validate() error {
+	return Validator.Struct(e)
+}
+
+{% endfor %}
+

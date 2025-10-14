@@ -1,0 +1,19 @@
+"""
+Auto-generated node models for pentagi-taxonomy.
+DO NOT EDIT - this file is generated from entities.yml
+"""
+
+from pydantic import BaseModel, Field
+from typing import Literal
+
+{% for node_name, node_def in nodes.items() %}
+class {{ node_name }}(BaseModel):
+{% if node_def.description %}
+    """{{ node_def.description }}"""
+{% endif %}
+{% for field_name, field_def in node_def.fields.items() %}
+    {{ field_name }}: {{ field_def.python_type }} | None = Field({{ field_def.field_args }})
+{% endfor %}
+
+{% endfor %}
+

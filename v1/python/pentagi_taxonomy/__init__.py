@@ -1,0 +1,17 @@
+"""
+Auto-generated Pentagi Taxonomy package.
+DO NOT EDIT - this file is generated from entities.yml
+"""
+
+# Version constant (read from version.yml during generation)
+TAXONOMY_VERSION: int = 1
+
+# Re-export entity types for convenience
+from .entity_map import ENTITY_TYPES, EDGE_TYPES, EDGE_TYPE_MAP
+
+__all__ = [
+    'TAXONOMY_VERSION',
+    'ENTITY_TYPES',
+    'EDGE_TYPES',
+    'EDGE_TYPE_MAP',
+]

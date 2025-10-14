@@ -1,0 +1,19 @@
+"""
+Auto-generated edge models for pentagi-taxonomy.
+DO NOT EDIT - this file is generated from entities.yml
+"""
+
+from pydantic import BaseModel, Field
+from typing import Literal
+
+{% for edge_name, edge_def in edges.items() %}
+class {{ edge_def.class_name }}(BaseModel):
+{% if edge_def.description %}
+    """{{ edge_def.description }}"""
+{% endif %}
+{% for field_name, field_def in edge_def.fields.items() %}
+    {{ field_name }}: {{ field_def.python_type }} | None = Field({{ field_def.field_args }})
+{% endfor %}
+
+{% endfor %}
+

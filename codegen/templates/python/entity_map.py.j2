@@ -1,0 +1,30 @@
+"""
+Auto-generated entity mappings for pentagi-taxonomy.
+DO NOT EDIT - this file is generated from entities.yml
+"""
+
+{% if nodes %}
+from .nodes import {{ nodes.keys() | join(', ') }}
+{% endif %}
+{% if edges %}
+from .edges import {{ edges.values() | map(attribute='class_name') | join(', ') }}
+{% endif %}
+
+ENTITY_TYPES = {
+{% for node_name in nodes.keys() %}
+    '{{ node_name }}': {{ node_name }},
+{% endfor %}
+}
+
+EDGE_TYPES = {
+{% for edge_name, edge_def in edges.items() %}
+    '{{ edge_name }}': {{ edge_def.class_name }},
+{% endfor %}
+}
+
+EDGE_TYPE_MAP = {
+{% for rel in relationships %}
+    ('{{ rel.source }}', '{{ rel.target }}'): [{% for edge in rel.edges %}'{{ edge }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+{% endfor %}
+}
+
