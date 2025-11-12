@@ -3,90 +3,865 @@ version: 1
 
 nodes:
   Target:
-    description: "A target system being assessed during penetration testing"
+    description: "Network endpoint, service, application, or host being assessed. Should include version information, technology stack, and network details (IP, port, protocol). Examples: 'phpMyAdmin 4.4.15.6 on 172.22.0.7:80', 'Apache 2.4.29 web server'"
     fields:
       version:
         type: int
-        description: "Taxonomy schema version (auto-injected by Graphiti fork)"
+        description: "Taxonomy schema version"
       entity_uuid:
         type: string
         description: "Unique identifier"
-      hostname:
+      identifier:
         type: string
-        description: "DNS hostname if known"
-      ip_address:
-        type: string
-        description: "IP address of the target"
-        regex: "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+        description: "Primary identifier (hostname, IP, URL)"
       target_type:
         type: string
-        description: "Classification of target"
-        enum: [host, web_service, api]
-      risk_score:
-        type: float
-        description: "Calculated risk score"
-        min: 0.0
-        max: 10.0
-      status:
+        enum: [host, service, web_application, api_endpoint, network_range, container]
+        description: "Type of target"
+      hostname:
         type: string
-        description: "Current status"
-        enum: [active, inactive]
-
-  Port:
-    description: "A network port on a target system"
-    fields:
-      version:
-        type: int
-        description: "Taxonomy schema version (auto-injected by Graphiti fork)"
-      entity_uuid:
+        description: "DNS hostname if applicable"
+      ip_address:
         type: string
-        description: "Unique identifier"
-      port_number:
+        description: "IP address if applicable"
+        regex: "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+      port:
         type: int
-        description: "Port number"
+        description: "Port number if service-specific"
         min: 1
         max: 65535
       protocol:
         type: string
-        description: "Network protocol"
-        enum: [tcp, udp]
-      state:
+        description: "Protocol (HTTP, HTTPS, SSH, etc.)"
+      technology_stack:
+        type: string[]
+        description: "Technologies detected (PHP, Apache, MySQL, etc.)"
+      status:
         type: string
-        description: "Port state"
-        enum: [open, closed, filtered]
+        enum: [discovered, active, compromised, analyzed, unreachable]
+        description: "Current assessment status"
 
-edges:
-  HAS_PORT:
-    description: "A target has a port"
+  Vulnerability:
+    description: "Security weakness or attack vector with CVE identifier, vulnerability class, or technical description. Should include severity assessment, exploitability status, version linkage, and test confirmation. Examples: 'CVE-2016-10134 SQLi in jsrpc.php profileIdx', 'XML External Entity (XXE) injection in document parser'"
     fields:
       version:
         type: int
-        description: "Taxonomy schema version (auto-injected by Graphiti fork)"
-      timestamp:
-        type: timestamp
-        description: "When association was established"
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      vulnerability_name:
+        type: string
+        description: "Vulnerability name or title"
+      vulnerability_class:
+        type: string
+        enum: [sql_injection, rce, xss, xxe, ssrf, lfi, rfi, csrf, auth_bypass, file_upload, command_injection, buffer_overflow, directory_traversal, privilege_escalation, information_disclosure, denial_of_service, deserialization, path_traversal, session_hijacking, other]
+        description: "OWASP/CWE category of vulnerability"
+      cve_id:
+        type: string
+        description: "CVE identifier if applicable"
+        regex: "^CVE-\\d{4}-\\d{4,7}$"
+      cvss_score:
+        type: float
+        description: "CVSS score if available"
+        min: 0.0
+        max: 10.0
+      severity:
+        type: string
+        enum: [critical, high, medium, low, info]
+        description: "Severity assessment"
+      exploitability:
+        type: string
+        enum: [confirmed_exploitable, likely_exploitable, theoretical, not_exploitable, unknown]
+        description: "Whether vulnerability can be exploited"
+      description:
+        type: string
+        description: "Technical description of the vulnerability"
+      exploitation_techniques_tested:
+        type: string[]
+        description: "List of exploitation techniques attempted (e.g., error-based SQLi, time-based SQLi, XXE file read)"
+      successful_techniques:
+        type: string[]
+        description: "Techniques that successfully exploited this vulnerability"
+      failed_techniques:
+        type: string[]
+        description: "Techniques that failed to exploit this vulnerability"
+      xxe_parser_type:
+        type: string
+        description: "XML parser type if XXE vulnerability (lxml, libxml2, Xerces, etc.)"
+      xxe_protocol_handlers:
+        type: string[]
+        description: "Available protocol handlers for XXE (file, http, ftp, expect, php, jar)"
+      xxe_oob_confirmed:
+        type: boolean
+        description: "Whether out-of-band XXE interaction was confirmed"
 
-  DISCOVERED:
-    description: "An action discovered an entity"
+  Tool:
+    description: "Executable scanner, testing tool, or exploitation framework. Extract when tool produces actionable results; note success/failure status. Examples: 'sqlmap', 'nmap', 'metasploit', 'Burp Suite'"
     fields:
       version:
         type: int
-        description: "Taxonomy schema version (auto-injected by Graphiti fork)"
-      timestamp:
-        type: timestamp
-        description: "Discovery timestamp"
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      tool_name:
+        type: string
+        description: "Tool name (nmap, sqlmap, metasploit, etc.)"
+      tool_category:
+        type: string
+        enum: [scanner, exploitation_framework, fuzzer, reconnaissance, enumeration, post_exploitation, password_cracker, web_proxy, network_tool, custom_script]
+        description: "Category of tool"
+      version_used:
+        type: string
+        description: "Version of the tool used"
+      purpose:
+        type: string
+        description: "What the tool was used for in this context"
+
+  TechnicalFinding:
+    description: "Specific security observation or test result. Summarize concisely (max 500 chars), include confidence level, prioritize findings that advance the assessment narrative. Examples: '113 DB tables enumerated via error-based SQLi', '/etc/passwd accessed via XXE: 48 users listed', 'phpMyAdmin version 4.4.15.6 disclosed in HTTP headers'"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      finding_type:
+        type: string
+        enum: [version_disclosure, open_port, exposed_endpoint, configuration_issue, credential, sensitive_data, exploit_success, reconnaissance_data, vulnerability_confirmation, patch_status, service_banner, database_enumeration, authentication_result]
+        description: "Type of finding"
+      title:
+        type: string
+        description: "Brief title of the finding"
+      content:
+        type: string
+        description: "Detailed finding content (sanitized and summarized)"
       confidence:
         type: float
-        description: "Confidence score"
+        description: "Confidence in the finding"
         min: 0.0
         max: 1.0
-      method:
+      severity:
         type: string
-        description: "Discovery method"
-        enum: [active, passive]
+        enum: [critical, high, medium, low, info]
+        description: "Severity of the finding"
+      evidence:
+        type: string
+        description: "Key evidence supporting the finding (truncated)"
+      extraction_technique:
+        type: string
+        description: "How data was extracted (e.g., error-based SQLi, time-based, manual)"
+      data_type:
+        type: string
+        enum: [database_schema, user_info, configuration, privileges, file_content, command_output, network_data, session_info, other]
+        description: "Type of data in this finding"
+
+  AttackTechnique:
+    description: "Specific exploitation method with technical details and payload information. Should map to MITRE ATT&CK taxonomy when applicable, record success/failure, and include actual payloads used. Examples: 'Error-based SQLi via updatexml()', 'Time-based blind SQLi with sleep()', 'Out-of-band XXE data exfiltration'"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      attack_technique_name:
+        type: string
+        description: "Name of the attack technique"
+      technique_category:
+        type: string
+        enum: [initial_access, execution, persistence, privilege_escalation, defense_evasion, credential_access, discovery, lateral_movement, collection, exfiltration, impact]
+        description: "MITRE ATT&CK category"
+      description:
+        type: string
+        description: "Description of how the technique works"
+      payload:
+        type: string
+        description: "Actual payload or command used (sanitized)"
+      success_indicator:
+        type: string
+        description: "What indicates successful execution"
+
+  TestPhase:
+    description: "A phase or stage of the penetration testing engagement"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      test_phase_name:
+        type: string
+        enum: [reconnaissance, scanning, enumeration, vulnerability_analysis, exploitation, post_exploitation, reporting, cleanup]
+        description: "Name of the test phase"
+      objective:
+        type: string
+        description: "Objective of this phase"
+      status:
+        type: string
+        enum: [not_started, in_progress, completed, blocked, skipped]
+        description: "Status of the phase"
+      start_timestamp:
+        type: timestamp
+        description: "When phase started"
+      end_timestamp:
+        type: timestamp
+        description: "When phase completed"
+
+  Credential:
+    description: "Actual authentication credentials with values (ALWAYS extract, including default credentials). Should include privilege level, discovery source, authentication status, and session tokens when applicable. Examples: 'Admin/zabbix', 'root/password', 'zbx_sessionid=0a0f93de...', 'API key: sk-abc123...'"
+    examples: ["username/password pairs", "API keys", "SSH private keys", "default credentials"]
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      credential_type:
+        type: string
+        enum: [username_password, api_key, token, ssh_key, certificate, hash, cookie]
+        description: "Type of credential"
+      username:
+        type: string
+        description: "Username if applicable"
+      is_valid:
+        type: boolean
+        description: "Whether credential is valid"
+      is_default:
+        type: boolean
+        description: "Whether this is a default credential (e.g., Admin/zabbix)"
+      privilege_level:
+        type: string
+        enum: [admin, user, guest, service_account, root, unknown]
+        description: "Privilege level of the credential"
+      source:
+        type: string
+        description: "How the credential was obtained"
+      authentication_state:
+        type: string
+        enum: [success, failure, requires_2fa, locked, expired, unknown]
+        description: "Result of authentication attempt with this credential"
+
+  ExploitCode:
+    description: "Actual exploit code, script, or payload used during testing. Should reference target vulnerability, include programming language, and document purpose/objective. Can be proof-of-concept, weaponized exploit, web shell, or reconnaissance script."
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      exploit_code_name:
+        type: string
+        description: "Name of the exploit"
+      language:
+        type: string
+        enum: [python, bash, php, ruby, powershell, javascript, go, other]
+        description: "Programming language"
+      purpose:
+        type: string
+        description: "What the exploit is designed to achieve"
+      file_path:
+        type: string
+        description: "Path where exploit was saved"
+      code_type:
+        type: string
+        enum: [proof_of_concept, weaponized_exploit, web_shell, reverse_shell, payload, script, reconnaissance_tool]
+        description: "Type of code"
+
+  AuthenticationAttempt:
+    description: "Login attempt (success or failure), session establishment (cookies/tokens/CSRF), credential validation, or bypass attempt. Should capture authentication state changes, privilege levels obtained, session tokens, and response details."
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      timestamp:
+        type: timestamp
+        description: "When authentication was attempted"
+      success:
+        type: boolean
+        description: "Whether authentication succeeded"
+      credential_used:
+        type: string
+        description: "Reference to credential entity used"
+      session_established:
+        type: boolean
+        description: "Whether a session was established"
+      response_code:
+        type: int
+        description: "HTTP response code if applicable"
+      error_message:
+        type: string
+        description: "Error message if authentication failed"
+
+  DatabaseMetadata:
+    description: "Database configuration, schema, and structure information. Should include SQLi payload types used for extraction, enumeration results (tables/columns), user privileges, configuration details, and technique comparisons. Avoid duplicate error entries. Examples: 'MySQL 5.7.33 with FILE privilege', '113 tables enumerated: users, sessions, config, logs...'"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      database_type:
+        type: string
+        enum: [mysql, postgresql, mssql, oracle, mongodb, redis, other]
+        description: "Type of database"
+      database_version:
+        type: string
+        description: "Database version if known"
+      database_user:
+        type: string
+        description: "Database user (e.g., root@172.22.0.7)"
+      table_count:
+        type: int
+        description: "Number of tables discovered"
+      table_names:
+        type: string[]
+        description: "List of table names discovered"
+      privileges:
+        type: string[]
+        description: "User privileges (e.g., FILE, SELECT, INSERT)"
+      secure_file_priv:
+        type: string
+        description: "secure_file_priv setting value"
+      configuration_details:
+        type: string
+        description: "Other relevant configuration information"
+
+  ExploitationAttempt:
+    description: "A specific exploitation attempt with a technique"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      timestamp:
+        type: timestamp
+        description: "When exploitation was attempted"
+      technique_type:
+        type: string
+        enum: [error_based_sqli, time_based_sqli, boolean_based_sqli, union_based_sqli, file_inclusion, command_injection, xxe, buffer_overflow, other]
+        description: "Type of exploitation technique"
+      success:
+        type: boolean
+        description: "Whether exploitation succeeded"
+      payload:
+        type: string
+        description: "Payload used (sanitized)"
+      response_hash:
+        type: string
+        description: "Hash of response for deduplication"
+      result_summary:
+        type: string
+        description: "Summary of what happened"
+
+  SessionInfo:
+    description: "Session tokens, cookies, and authentication state AFTER successful authentication"
+    examples: ["zbx_sessionid cookie", "PHPSESSID cookie", "JWT token", "OAuth2 access token", "CSRF token"]
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      session_type:
+        type: string
+        enum: [cookie, token, jwt, oauth, api_key, other]
+        description: "Type of session mechanism"
+      session_id:
+        type: string
+        description: "Session identifier (e.g., zbx_sessionid value)"
+      csrf_token:
+        type: string
+        description: "CSRF token if applicable"
+      established_at:
+        type: timestamp
+        description: "When session was established"
+      expires_at:
+        type: timestamp
+        description: "When session expires (if known)"
+      privilege_level:
+        type: string
+        enum: [guest, user, admin, root, unknown]
+        description: "Privilege level of this session"
+
+  FileSystemAccess:
+    description: "File system access attempt and result. For successful reads, include file path and content preview. Document permission boundaries, file types accessed, and sensitivity level. Skip duplicate permission denials (keep first only) and verbose methodology without results. Examples: '/etc/passwd read: 48 user accounts', 'SSH private key found at /root/.ssh/id_rsa'"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      file_path:
+        type: string
+        description: "Path to file or directory accessed"
+      access_type:
+        type: string
+        enum: [read, write, execute, list, stat]
+        description: "Type of access attempted"
+      success:
+        type: boolean
+        description: "Whether access was successful"
+      access_method:
+        type: string
+        enum: [xxe, lfi, rfi, command_injection, direct_access, path_traversal]
+        description: "Method used to access file"
+      content_preview:
+        type: string
+        description: "Preview of file content if read (truncated to 500 chars)"
+      permission_error:
+        type: string
+        description: "Permission error message if access denied"
+      file_type:
+        type: string
+        enum: [config, credential, log, system_info, ssh_key, source_code, database, other]
+        description: "Type of file accessed"
+      sensitivity:
+        type: string
+        enum: [critical, high, medium, low, info]
+        description: "Sensitivity level of accessed file"
+
+  XMLPayload:
+    description: "XML payload used in XXE exploitation. Should identify XML parser (type/version), protocol handlers available (file/http/ftp/expect/php/jar), successful file reads, OOB interaction confirmations, payload variations tested, and parser configuration. Examples: 'XXE file:// payload reading /etc/passwd', 'OOB XXE via HTTP callback to attacker.com'"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      entity_uuid:
+        type: string
+        description: "Unique identifier"
+      payload_type:
+        type: string
+        enum: [file_read, oob_exfil, rce_attempt, ssrf, entity_expansion, parameter_entity]
+        description: "Type of XXE payload"
+      payload_content:
+        type: string
+        description: "Actual XML payload (sanitized)"
+      encoding:
+        type: string
+        enum: [utf-8, utf-16, utf-16be, base64, other]
+        description: "Payload encoding"
+      protocol_handler:
+        type: string
+        enum: [file, http, https, ftp, expect, php, jar, data, gopher, other]
+        description: "Protocol handler used in payload"
+      success:
+        type: boolean
+        description: "Whether payload was successful"
+      response_length:
+        type: int
+        description: "Length of response in bytes"
+      oob_interaction:
+        type: boolean
+        description: "Whether OOB interaction was observed"
+
+edges:
+  HAS_VULNERABILITY:
+    description: "A target has or is affected by a vulnerability"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When vulnerability was identified"
+      confidence:
+        type: float
+        description: "Confidence in the vulnerability"
+        min: 0.0
+        max: 1.0
+      verified:
+        type: boolean
+        description: "Whether vulnerability was verified through exploitation"
+
+  USED_AGAINST:
+    description: "A tool or technique was used against a target"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When tool was used"
+      success:
+        type: boolean
+        description: "Whether the use was successful"
+      execution_context:
+        type: string
+        description: "Context of tool usage (command line, parameters)"
+
+  EXPLOITS:
+    description: "A technique or exploit code exploits a vulnerability"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When exploitation occurred"
+      success:
+        type: boolean
+        description: "Whether exploitation was successful"
+      impact:
+        type: string
+        enum: [full_compromise, partial_access, information_disclosure, denial_of_service, none]
+        description: "Impact of successful exploitation"
+
+  DISCOVERED_IN:
+    description: "A finding was discovered during a test phase"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When discovery occurred"
+      discovery_method:
+        type: string
+        description: "How the finding was discovered"
+
+  LEADS_TO:
+    description: "One finding, technique, or vulnerability leads to another (attack chain)"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When connection was established"
+      reasoning:
+        type: string
+        description: "How one leads to the other"
+
+  TARGETS:
+    description: "A vulnerability, technique, or tool targets a specific target"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When targeting occurred"
+
+  PROVIDES_ACCESS_TO:
+    description: "A credential provides access to a target or service"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When access was verified"
+      access_level:
+        type: string
+        enum: [read_only, read_write, administrative, root, limited]
+        description: "Level of access provided"
+
+  YIELDS:
+    description: "An action, tool use, or technique yields a finding"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When finding was produced"
+
+  USES_TOOL:
+    description: "A technique or attack uses a specific tool"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When tool was used"
+
+  AUTHENTICATED_WITH:
+    description: "A credential was used to authenticate against a target"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When authentication occurred"
+      success:
+        type: boolean
+        description: "Whether authentication succeeded"
+      session_created:
+        type: string
+        description: "Session ID created (if applicable)"
+
+  EXTRACTED_FROM:
+    description: "A finding was extracted from a target using a specific technique"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When extraction occurred"
+      extraction_method:
+        type: string
+        description: "Method used for extraction (e.g., error-based SQLi)"
+
+  ENUMERATED:
+    description: "A tool enumerated database metadata"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When enumeration occurred"
+      records_found:
+        type: int
+        description: "Number of records/items found"
+
+  ESTABLISHES:
+    description: "An authentication attempt establishes a session"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When session was established"
+
+  ACCESSED_FILE:
+    description: "An attack technique or exploit accessed a file"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When file was accessed"
+      bytes_read:
+        type: int
+        description: "Number of bytes read if applicable"
+
+  REVEALED:
+    description: "A file system access revealed information or findings"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When information was revealed"
+      revelation_type:
+        type: string
+        enum: [credentials, configuration, system_info, vulnerability, other]
+        description: "Type of information revealed"
+
+  USES_PAYLOAD:
+    description: "An exploitation attempt uses a specific XML payload"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When payload was used"
+      attempt_number:
+        type: int
+        description: "Sequential attempt number"
+
+  OOB_INTERACTION:
+    description: "An XML payload triggered an out-of-band interaction"
+    fields:
+      version:
+        type: int
+        description: "Taxonomy schema version"
+      timestamp:
+        type: timestamp
+        description: "When interaction occurred"
+      interaction_type:
+        type: string
+        enum: [http_callback, dns_query, ftp_connection, other]
+        description: "Type of OOB interaction"
+      data_exfiltrated:
+        type: string
+        description: "Data exfiltrated via OOB channel (preview)"
 
 relationships:
+  # Target relationships
   - source: Target
-    target: Port
-    edges: [HAS_PORT]
-
+    target: Vulnerability
+    edges: [HAS_VULNERABILITY]
+  
+  - source: Target
+    target: TechnicalFinding
+    edges: [YIELDS]
+  
+  - source: Target
+    target: Target
+    edges: [LEADS_TO]  # For lateral movement or pivot chains
+  
+  # Vulnerability relationships
+  - source: Vulnerability
+    target: Target
+    edges: [TARGETS]
+  
+  # Tool relationships
+  - source: Tool
+    target: Target
+    edges: [USED_AGAINST]
+  
+  - source: Tool
+    target: TechnicalFinding
+    edges: [YIELDS]
+  
+  - source: Tool
+    target: Vulnerability
+    edges: [YIELDS]
+  
+  # Technique relationships
+  - source: AttackTechnique
+    target: Target
+    edges: [USED_AGAINST]
+  
+  - source: AttackTechnique
+    target: Vulnerability
+    edges: [EXPLOITS]
+  
+  - source: AttackTechnique
+    target: Tool
+    edges: [USES_TOOL]
+  
+  - source: AttackTechnique
+    target: AttackTechnique
+    edges: [LEADS_TO]  # For attack chains
+  
+  # Finding relationships
+  - source: TechnicalFinding
+    target: TestPhase
+    edges: [DISCOVERED_IN]
+  
+  - source: TechnicalFinding
+    target: Vulnerability
+    edges: [LEADS_TO]
+  
+  - source: TechnicalFinding
+    target: TechnicalFinding
+    edges: [LEADS_TO]  # Findings that lead to other findings
+  
+  # Credential relationships
+  - source: Credential
+    target: Target
+    edges: [PROVIDES_ACCESS_TO]
+  
+  - source: TechnicalFinding
+    target: Credential
+    edges: [REVEALED]
+  
+  # Exploit code relationships
+  - source: ExploitCode
+    target: Vulnerability
+    edges: [EXPLOITS]
+  
+  - source: ExploitCode
+    target: Target
+    edges: [USED_AGAINST]
+  
+  # Test phase relationships
+  - source: TestPhase
+    target: TestPhase
+    edges: [LEADS_TO]  # Sequential phases
+  
+  # Authentication relationships
+  - source: AuthenticationAttempt
+    target: Target
+    edges: [USED_AGAINST]
+  
+  - source: AuthenticationAttempt
+    target: SessionInfo
+    edges: [ESTABLISHES]
+  
+  # Database metadata relationships
+  - source: DatabaseMetadata
+    target: Target
+    edges: [EXTRACTED_FROM]
+  
+  - source: Tool
+    target: DatabaseMetadata
+    edges: [ENUMERATED]
+  
+  # Exploitation attempt relationships
+  - source: ExploitationAttempt
+    target: Target
+    edges: [USED_AGAINST]
+  
+  - source: ExploitationAttempt
+    target: Vulnerability
+    edges: [EXPLOITS]
+  
+  - source: ExploitationAttempt
+    target: TechnicalFinding
+    edges: [YIELDS]
+  
+  # Session relationships
+  - source: SessionInfo
+    target: Target
+    edges: [PROVIDES_ACCESS_TO]
+  
+  - source: Credential
+    target: Target
+    edges: [AUTHENTICATED_WITH]
+  
+  # File system access relationships
+  - source: FileSystemAccess
+    target: Target
+    edges: [EXTRACTED_FROM]
+  
+  - source: AttackTechnique
+    target: FileSystemAccess
+    edges: [ACCESSED_FILE]
+  
+  - source: ExploitationAttempt
+    target: FileSystemAccess
+    edges: [ACCESSED_FILE]
+  
+  - source: FileSystemAccess
+    target: TechnicalFinding
+    edges: [REVEALED]
+  
+  - source: FileSystemAccess
+    target: Credential
+    edges: [REVEALED]
+  
+  # XML payload relationships
+  - source: XMLPayload
+    target: Vulnerability
+    edges: [EXPLOITS]
+  
+  - source: ExploitationAttempt
+    target: XMLPayload
+    edges: [USES_PAYLOAD]
+  
+  - source: XMLPayload
+    target: Target
+    edges: [USED_AGAINST]
+  
+  - source: XMLPayload
+    target: FileSystemAccess
+    edges: [ACCESSED_FILE]
+  
+  - source: XMLPayload
+    target: TechnicalFinding
+    edges: [OOB_INTERACTION]
